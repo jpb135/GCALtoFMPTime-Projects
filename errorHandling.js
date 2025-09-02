@@ -333,7 +333,7 @@ function processCalendarEventsWithErrorHandling(startDate, endDate) {
           Date: dateString,
           Time: duration,
           Summary: summary,
-          User_ID: currentUserId
+          UID_User_fk: currentUserId
         }
       };
 
