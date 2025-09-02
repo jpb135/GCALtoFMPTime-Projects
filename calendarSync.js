@@ -22,6 +22,7 @@ function processCalendarEventsLegacy(startDate, endDate) {
     const judgeMap        = loadJudgeMapFromSheet();
     const otherEventTypes = loadOtherEventTypesFromSheet();
     const courtEventTypes = loadEventVocabularyFromSheet(); // All event vocabulary from sheet
+    const currentUserId   = getCurrentUserId(); // Get current user's ID
 
     // Fetch events
     const events = CalendarApp.getDefaultCalendar().getEvents(startDate, endDate);
@@ -48,7 +49,8 @@ function processCalendarEventsLegacy(startDate, endDate) {
           Body:          title,
           Date:          dateString,
           Time:          duration,
-          Summary:       summary
+          Summary:       summary,
+          User_ID:       currentUserId
         }
       });
     });

@@ -282,6 +282,7 @@ function processCalendarEventsWithErrorHandling(startDate, endDate) {
     const judgeMap = retryOperation(() => loadJudgeMapFromSheet(), 3, 1000);
     const otherEventTypes = retryOperation(() => loadOtherEventTypesFromSheet(), 3, 1000);
     const courtEventTypes = retryOperation(() => loadEventVocabularyFromSheet(), 3, 1000);
+    const currentUserId = getCurrentUserId(); // Get current user's ID
 
     // Ensure client data is fresh (trigger smart sync if needed)
     console.log('🔄 Checking client data freshness...');
@@ -331,7 +332,8 @@ function processCalendarEventsWithErrorHandling(startDate, endDate) {
           Body: title,
           Date: dateString,
           Time: duration,
-          Summary: summary
+          Summary: summary,
+          User_ID: currentUserId
         }
       };
 
