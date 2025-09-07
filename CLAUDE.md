@@ -39,10 +39,23 @@ Daily calendar → UID_Map sheet → Court/Event types → 12-min blocks → Tim
 ## Key Development Commands
 
 ### Core Processing Functions
-- `processCalendarEvents(startDate, endDate)` - Main processing pipeline with enhanced error handling
+- `processCalendarEvents(startDate, endDate)` - Main processing pipeline (now includes error handling)
 - `processCalendarEventsWithErrorHandling(startDate, endDate)` - Production-ready processing with comprehensive error management
+- `processCalendarEventsLegacy(startDate, endDate)` - Legacy version without enhanced error handling
 - `syncClientsToUIDSheet()` - Smart daily client data sync from FileMaker (prevents multiple syncs)
 - `createDailyClientSyncTrigger()` - Set up automated smart daily sync trigger
+
+### Development Commands
+- **Testing**: `runAllCalendarSystemTests()` - Run complete test suite (10 tests)
+- **Quick Test**: `testSecretManagerAccess()` - Verify credentials and connectivity  
+- **Health Check**: `systemHealthCheck()` - Overall system assessment
+- **Performance**: `benchmarkProcessingPerformance()` - Processing metrics and timing
+
+### Google Apps Script Deployment
+- **Script ID**: `1ObGQCIKFv6Aafl__4IsABlYe1qLBlWZ73uWAvaNDFwKLYqgYXJvoGll8`
+- **Deploy with clasp**: `clasp push` to update library code
+- **Runtime**: V8 engine with Chicago timezone
+- **Library Users**: 6 active users with shared client sync coordination
 
 ### Smart Client Sync Functions (Multi-User Library Safe)
 - `smartSyncClientsToUIDSheet()` - Timestamp-aware sync that prevents multiple daily syncs
@@ -120,10 +133,25 @@ All sensitive data stored in **GCP Secret Manager** under project `bransfield-gm
 
 ## Development Patterns
 
+### File Structure
+The codebase is organized into 12 specialized modules:
+- **calendarSync.js** - Main processing pipeline and event handling
+- **auth.js** - FileMaker authentication and Secret Manager integration
+- **fmpPost.js** - FileMaker Data API record creation
+- **clientMap.js** - Client name matching and UID mapping
+- **smartClientSync.js** - Multi-user safe daily client synchronization  
+- **summaryGenerator.js** - Legal event summarization and billing descriptions
+- **judgeLoader.js** - Courtroom to judge mappings
+- **courtEventLoader.js** - Court event vocabulary and categorization
+- **eventTypesLoader.js** - Non-court event type definitions
+- **errorHandling.js** - Production-grade error management and notifications
+- **testSuite.js** - Comprehensive testing framework (10 tests)
+- **calendarUtils.js** - Date/time utilities and calendar filtering
+
 ### Error Handling
-- **Pattern**: Basic try/catch with Logger.log output
-- **Recovery**: Generally returns empty objects/arrays on failure
-- **Limitation**: No comprehensive error recovery or user notifications
+- **Pattern**: Production-grade error handling with email notifications and retry logic
+- **Recovery**: Graceful degradation with partial processing continuation
+- **Enhancement**: Structured error categorization and timeout detection
 
 ### Logging Convention
 - **Pattern**: Emoji-prefixed Logger.log messages for easy identification

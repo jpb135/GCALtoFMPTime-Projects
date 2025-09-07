@@ -137,6 +137,17 @@ function loadClientMappingFromSheetSmart() {
     }
 
     Logger.log(`✅ Smart-loaded ${Object.keys(clientMap).length} clients from sheet.`);
+    
+    // Log detailed client list for debugging
+    console.log('👥 CLIENT LIST LOADED:');
+    console.log('======================');
+    const clientEntries = Object.entries(clientMap);
+    clientEntries.forEach(([lastName, uid], index) => {
+      console.log(`  ${index + 1}. ${lastName} → UID: ${uid}`);
+    });
+    console.log(`======================`);
+    console.log(`Total clients: ${clientEntries.length}\n`);
+    
     return clientMap;
 
   } catch (error) {
@@ -146,10 +157,36 @@ function loadClientMappingFromSheetSmart() {
 }
 function matchClientFromTitle(title, clientMap) {
   const lowerTitle = title.toLowerCase();
+  
+  // Log the matching attempt
+  console.log(`🔍 Attempting to match: "${title}"`);
+  
   for (const name in clientMap) {
     if (lowerTitle.includes(name)) {
+      console.log(`  ✅ MATCHED: Found "${name}" in title → UID: ${clientMap[name]}`);
       return { name, uid: clientMap[name] };
     }
   }
+  
+  // Log why no match was found (informational, not an error)
+  console.log(`  ℹ️ NO CLIENT MATCH: Likely a personal event`);
+  console.log(`     Searched against ${Object.keys(clientMap).length} client names`);
+  
+  // Optionally show potential partial matches (for debugging)
+  const potentialMatches = [];
+  for (const name in clientMap) {
+    // Check if any part of the name is in the title (partial match)
+    const nameParts = name.split(' ');
+    for (const part of nameParts) {
+      if (part.length > 2 && lowerTitle.includes(part)) {
+        potentialMatches.push(`${name} (partial: ${part})`);
+      }
+    }
+  }
+  
+  if (potentialMatches.length > 0) {
+    console.log(`     Potential partial matches: ${potentialMatches.join(', ')}`);
+  }
+  
   return null;
 }

@@ -10,13 +10,15 @@
  */
 function sendErrorNotification(errorType, errorDetails, userEmail = null) {
   try {
-    const recipient = userEmail || Session.getActiveUser().getEmail();
+    // ONLY send to developer - never to users
+    const adminEmail = 'john@bransfield.net';
+    const userEmailForLogging = userEmail || Session.getActiveUser().getEmail();
     const subject = `🚨 Calendar Integration Error: ${errorType}`;
     
     const body = `Critical error in Calendar-FileMaker integration:
 
 ERROR TYPE: ${errorType}
-USER: ${recipient}
+USER: ${userEmailForLogging}
 TIMESTAMP: ${new Date().toLocaleString()}
 DETAILS: ${errorDetails}
 
@@ -28,15 +30,8 @@ Next Steps: Review logs and consider system optimization
 
 - Calendar Integration System`;
 
-    // Send to user
-    MailApp.sendEmail(recipient, subject, body);
-    
-    // Also send to administrator (if different)
-    const adminEmail = 'john@bransfield.net';
-    if (recipient !== adminEmail) {
-      MailApp.sendEmail(adminEmail, subject + ' [Team Member Alert]', 
-        `Team member ${recipient} experienced:\n\n${body}`);
-    }
+    // Send ONLY to administrator/developer
+    MailApp.sendEmail(adminEmail, subject, body);
     
     console.log(`✅ Error notification sent for: ${errorType}`);
     
@@ -228,6 +223,7 @@ function processWithGracefulDegradation(items, processor, options = {}) {
     total: items.length,
     successful: 0,
     failed: 0,
+    skipped: 0,
     errors: [],
     results: []
   };
@@ -238,29 +234,43 @@ function processWithGracefulDegradation(items, processor, options = {}) {
   for (let i = 0; i < items.length; i++) {
     try {
       const result = processor(items[i], i);
-      results.results.push({ index: i, status: 'success', data: result });
-      results.successful++;
+      
+      // Check if processor returned null (skip) vs actual result
+      if (result === null) {
+        results.results.push({ index: i, status: 'skipped' });
+        results.skipped++;
+      } else {
+        results.results.push({ index: i, status: 'success', data: result });
+        results.successful++;
+      }
       
     } catch (error) {
-      const errorInfo = categorizeError(error, `Processing item ${i}`);
-      results.errors.push({ index: i, error: errorInfo });
-      results.results.push({ index: i, status: 'failed', error: errorInfo });
-      results.failed++;
-      
-      console.error(`❌ Item ${i} failed: ${error.message}`);
-      
-      // Stop if too many failures
-      if (stopOnExcessiveFailures && results.failed > maxFailures) {
-        console.error(`🛑 STOPPING: Excessive failures (${results.failed}/${results.total})`);
-        sendErrorNotification('PROCESSING_ERROR', 
-          `Excessive failures during processing: ${results.failed}/${results.total} items failed`);
-        break;
+      // Only count real errors as failures, not skipped events
+      if (!error.message.includes('Event filtered out')) {
+        const errorInfo = categorizeError(error, `Processing item ${i}`);
+        results.errors.push({ index: i, error: errorInfo });
+        results.results.push({ index: i, status: 'failed', error: errorInfo });
+        results.failed++;
+        
+        console.error(`❌ Item ${i} failed: ${error.message}`);
+        
+        // Stop if too many failures
+        if (stopOnExcessiveFailures && results.failed > maxFailures) {
+          console.error(`🛑 STOPPING: Excessive failures (${results.failed}/${results.total})`);
+          sendErrorNotification('PROCESSING_ERROR', 
+            `Excessive failures during processing: ${results.failed}/${results.total} items failed`);
+          break;
+        }
+      } else {
+        // Filtered events (all-day, multi-day) are just skipped
+        results.skipped++;
+        results.results.push({ index: i, status: 'skipped', reason: error.message });
       }
     }
   }
   
   // Log summary
-  console.log(`📊 Processing complete: ${results.successful}/${results.total} successful, ${results.failed} failed`);
+  console.log(`📊 Processing complete: ${results.successful}/${results.total} successful, ${results.skipped} skipped, ${results.failed} failed`);
   
   return results;
 }
@@ -294,6 +304,23 @@ function processCalendarEventsWithErrorHandling(startDate, endDate) {
     
     console.log(`📅 Found ${events.length} calendar events to process`);
     
+    // Log all found calendar events
+    console.log('📋 CALENDAR EVENTS FOUND:');
+    console.log('========================');
+    events.forEach((event, index) => {
+      const title = event.getTitle();
+      const start = event.getStartTime();
+      const end = event.getEndTime();
+      const isAllDay = event.isAllDayEvent();
+      const duration = ((end - start) / (1000 * 60 * 60)).toFixed(2); // hours
+      
+      console.log(`Event ${index + 1}: "${title}"`);
+      console.log(`  - Date/Time: ${start.toLocaleString()}`);
+      console.log(`  - Duration: ${duration} hours`);
+      console.log(`  - All Day: ${isAllDay}`);
+    });
+    console.log('========================\n');
+    
     // Early timeout warning
     if (events.length > 50) {
       console.log(`⚠️ Large batch detected (${events.length} events). Monitor for timeout.`);
@@ -301,6 +328,9 @@ function processCalendarEventsWithErrorHandling(startDate, endDate) {
         `Processing ${events.length} calendar events. Monitor for completion.`);
     }
 
+    // Track unmatched events for summary
+    const unmatchedEvents = [];
+    
     // Process events with graceful degradation
     const processingResults = processWithGracefulDegradation(events, (event, index) => {
       // Check timeout periodically
@@ -319,7 +349,14 @@ function processCalendarEventsWithErrorHandling(startDate, endDate) {
 
       const match = matchClientFromTitle(title, clientMap);
       if (!match) {
-        throw new Error('No client match found in title');
+        // Not a failure - just a personal event without a client
+        unmatchedEvents.push({
+          title: title,
+          date: start.toLocaleString(),
+          duration: _calculateRoundedDuration(start, end)
+        });
+        console.log(`  ℹ️ Skipping non-client event: "${title}"`);
+        return null; // Return null to indicate skip, not an error
       }
 
       const duration = _calculateRoundedDuration(start, end);
@@ -350,16 +387,35 @@ function processCalendarEventsWithErrorHandling(startDate, endDate) {
     console.log('📊 PROCESSING COMPLETE:');
     console.log(`   Events Found: ${events.length}`);
     console.log(`   Successfully Processed: ${processingResults.successful}`);
-    console.log(`   Failed: ${processingResults.failed}`);
+    console.log(`   Skipped (non-client): ${processingResults.skipped || unmatchedEvents.length}`);
+    console.log(`   Failed (errors): ${processingResults.failed}`);
     console.log(`   Total Runtime: ${totalRuntime} seconds`);
+    
+    // Log unmatched events summary (informational only, not an error)
+    if (unmatchedEvents.length > 0) {
+      console.log('\nℹ️ NON-CLIENT EVENTS (Personal/Other):');
+      console.log('=====================================');
+      unmatchedEvents.forEach((event, index) => {
+        console.log(`${index + 1}. "${event.title}"`);
+        console.log(`   Date: ${event.date}`);
+        console.log(`   Duration: ${event.duration} hours`);
+      });
+      console.log(`\nTotal non-client events: ${unmatchedEvents.length}`);
+      console.log('Note: These are likely personal events and were skipped intentionally');
+      console.log('=====================================\n');
+    } else {
+      console.log('\n✅ All events were client-related and processed!\n');
+    }
 
     return {
       status: processingResults.failed === 0 ? 'SUCCESS' : 'PARTIAL_SUCCESS',
       eventsFound: events.length,
       successful: processingResults.successful,
+      skipped: processingResults.skipped || unmatchedEvents.length,
       failed: processingResults.failed,
       runtimeSeconds: totalRuntime,
-      errors: processingResults.errors
+      errors: processingResults.errors,
+      unmatchedEvents: unmatchedEvents
     };
 
   } catch (error) {
