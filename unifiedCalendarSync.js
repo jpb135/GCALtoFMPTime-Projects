@@ -156,38 +156,4 @@ function testUnifiedCalendarProcessing(testDate = null) {
   }
 }
 
-/**
- * Compare unified processing vs legacy processing
- * Useful for validation during transition
- */
-function compareUnifiedVsLegacyProcessing() {
-  Logger.log('🔄 Comparing Unified vs Legacy Processing...');
-  
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  
-  try {
-    Logger.log('\n🎯 Running Unified Processing...');
-    const unifiedResult = processCalendarEventsUnified(today, tomorrow);
-    
-    Logger.log('\n📰 Running Legacy Processing...');
-    let legacyResult;
-    try {
-      legacyResult = processCalendarEventsLegacy(today, tomorrow);
-    } catch (e) {
-      legacyResult = { error: e.message };
-    }
-    
-    Logger.log('\n📊 Comparison Results:');
-    Logger.log('Unified:', unifiedResult);
-    Logger.log('Legacy:', legacyResult);
-    
-    return { unified: unifiedResult, legacy: legacyResult };
-    
-  } catch (error) {
-    Logger.log(`❌ Comparison failed: ${error.message}`);
-    return null;
-  }
-}
+// Comparison function removed - no longer needed since we only use unified system

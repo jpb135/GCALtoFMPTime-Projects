@@ -287,11 +287,10 @@ function processCalendarEventsWithErrorHandling(startDate, endDate) {
   try {
     console.log('🔄 ENHANCED CALENDAR PROCESSING WITH ERROR HANDLING...');
     
-    // Load all mappings with retry logic (using smart loading functions)
+    // Load all mappings with retry logic (using unified system)
     const clientMap = retryOperation(() => loadClientMappingFromSheet(), 3, 1000);
     const judgeMap = retryOperation(() => loadJudgeMapFromSheet(), 3, 1000);
-    const otherEventTypes = retryOperation(() => loadOtherEventTypesFromSheet(), 3, 1000);
-    const courtEventTypes = retryOperation(() => loadEventVocabularyFromSheet(), 3, 1000);
+    const unifiedEvents = retryOperation(() => loadUnifiedEventVocabulary(), 3, 1000);
     const currentUserId = getCurrentUserId(); // Get current user's ID
 
     // Ensure client data is fresh (trigger smart sync if needed)
@@ -348,24 +347,25 @@ function processCalendarEventsWithErrorHandling(startDate, endDate) {
       }
 
       const match = matchClientFromTitle(title, clientMap);
+      // Process all events, even without client matches
+      const duration = _calculateRoundedDuration(start, end);
+      const dateString = formatDateForFileMaker(start);
+      const summary = generateUnifiedSummary(title, match);
+
       if (!match) {
-        // Not a failure - just a personal event without a client
+        // Track unmatched events but still process them
         unmatchedEvents.push({
           title: title,
           date: start.toLocaleString(),
-          duration: _calculateRoundedDuration(start, end)
+          duration: duration,
+          summary: summary
         });
-        console.log(`  ℹ️ Skipping non-client event: "${title}"`);
-        return null; // Return null to indicate skip, not an error
+        console.log(`  ℹ️ Processing non-client event: "${title}" → "${summary}"`);
       }
-
-      const duration = _calculateRoundedDuration(start, end);
-      const dateString = formatDateForFileMaker(start);
-      const summary = generateSummaryFromTitle(title, judgeMap, otherEventTypes, courtEventTypes, match);
 
       const payload = {
         fieldData: {
-          UID_Client_fk: match.uid,
+          UID_Client_fk: match ? match.uid : null, // Allow null for no client
           Body: title,
           Date: dateString,
           Time: duration,

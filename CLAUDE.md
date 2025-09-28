@@ -24,7 +24,7 @@ Daily calendar → UID_Map sheet → Court/Event types → 12-min blocks → Tim
 - **Google Calendar**: Default calendar events with client names in titles
 - **UID_Map Sheet**: Client name → FileMaker UID mappings (synced daily at 3 PM)
 - **Judge Sheet**: Courtroom number → Judge name mappings  
-- **EventTypes Sheet**: Non-court event keyword → description mappings
+- **Unified Event Vocabulary Sheet**: Consolidated event keywords → descriptions for all event types (court + client services)
 
 **Core Processing:**
 - **Client Matching**: Simple string matching against last names in calendar titles
@@ -36,12 +36,24 @@ Daily calendar → UID_Map sheet → Court/Event types → 12-min blocks → Tim
 - **GCP Secret Manager**: Secure credential storage for FileMaker and sheet access
 - **FileMaker Data API**: Authentication, record creation, and client synchronization
 
+### Unified Event System Architecture (Current)
+
+**Unified System Files:**
+- **`unifiedEventLoader.js`** - Load and match events from consolidated vocabulary sheet
+- **`unifiedSummaryGenerator.js`** - Generate professional billing descriptions using unified system  
+- **`unifiedCalendarSync.js`** - Process calendar events with unified event vocabulary
+
+**Files Ready for Deletion:**
+- **`courtEventLoader.js`** - Replaced by unified system (marked for deletion)
+- **`eventTypesLoader.js`** - Replaced by unified system (marked for deletion)
+- **`summaryGenerator.js`** - Replaced by unified system (marked for deletion)
+
 ## Key Development Commands
 
 ### Core Processing Functions
-- `processCalendarEvents(startDate, endDate)` - Main processing pipeline (now includes error handling)
-- `processCalendarEventsWithErrorHandling(startDate, endDate)` - Production-ready processing with comprehensive error management
-- `processCalendarEventsLegacy(startDate, endDate)` - Legacy version without enhanced error handling
+- `processCalendarEvents(startDate, endDate)` - Main processing pipeline using unified system (delegates to error handling version)
+- `processCalendarEventsWithErrorHandling(startDate, endDate)` - Production-ready processing with comprehensive error management using unified system
+- `processCalendarEventsUnified(startDate, endDate)` - Direct unified system processing (handles events with and without client matches)
 - `syncClientsToUIDSheet()` - Smart daily client data sync from FileMaker (prevents multiple syncs)
 - `createDailyClientSyncTrigger()` - Set up automated smart daily sync trigger
 
@@ -53,9 +65,17 @@ Daily calendar → UID_Map sheet → Court/Event types → 12-min blocks → Tim
 
 ### Google Apps Script Deployment
 - **Script ID**: `1ObGQCIKFv6Aafl__4IsABlYe1qLBlWZ73uWAvaNDFwKLYqgYXJvoGll8`
-- **Deploy with clasp**: `clasp push` to update library code
+- **File Extension Conversion**: **CRITICAL** - All `.js` files must be converted to `.gs` extensions before pushing to Google Apps Script
+- **Deploy with clasp**: `clasp push` to update library code (ensures automatic `.js` → `.gs` conversion)
+- **Manual Upload**: If uploading files manually, rename all `.js` files to `.gs` extensions first
 - **Runtime**: V8 engine with Chicago timezone
 - **Library Users**: 6 active users with shared client sync coordination
+
+**Deployment Process:**
+1. Develop locally with `.js` extensions for IDE support
+2. Convert `.js` → `.gs` before deployment (or use `clasp push` for automatic conversion)
+3. Test deployed library with individual user scripts
+4. Publish new version for team access
 
 ### Smart Client Sync Functions (Multi-User Library Safe)
 - `smartSyncClientsToUIDSheet()` - Timestamp-aware sync that prevents multiple daily syncs
@@ -66,12 +86,11 @@ Daily calendar → UID_Map sheet → Court/Event types → 12-min blocks → Tim
 ### Enhanced Data Loading Functions  
 - `loadClientMappingFromSheet()` - Load client UID mappings
 - `loadJudgeMapFromSheet()` - Load courtroom-to-judge mappings
-- `loadEventVocabularyFromSheet()` - Load unified event vocabulary (court + client services)
-- `loadOtherEventTypesFromSheet()` - Load non-court event categories
+- `loadUnifiedEventVocabulary()` - Load unified event vocabulary from consolidated sheet
 
 ### Event Processing & Summarization
-- `generateSummaryFromTitle(title, judgeMap, otherEventTypes, courtEventTypes, clientMatch)` - Create professional billing descriptions with client name replacement
-- `findCourtEventMatch(title, courtEvents)` - Intelligent event matching with priority sorting
+- `generateUnifiedSummary(title, clientMatch)` - Create professional billing descriptions using unified event system
+- `findUnifiedEventMatch(title, events)` - Intelligent event matching with keyword prioritization from unified vocabulary
 
 ### Error Handling & Monitoring Functions
 - `sendErrorNotification(errorType, details, userEmail)` - Email notifications for critical errors
@@ -185,11 +204,20 @@ const decoded = Utilities.newBlob(Utilities.base64Decode(JSON.parse(response.get
 ## System Architecture Updates
 
 ### **Recent Enhancements (Current Version):**
+✅ **Unified Event Vocabulary System** - **MAJOR UPDATE**: Migrated from dual-sheet system to single consolidated event vocabulary (Sheet ID: `1dvuh7CzamgBlQmCT2ysQOfS-eRMei7GVcV8M-blaWTw`)  
 ✅ **Comprehensive Test Suite** - 10-test verification system with health monitoring  
 ✅ **Production-Grade Error Handling** - Email notifications, retry logic, timeout detection  
 ✅ **Event Vocabulary System** - Google Sheet-based court and client service categorization  
 ✅ **Client Name Replacement** - Dynamic client name insertion in billing descriptions  
 ✅ **Structured Error Logging** - Professional error categorization and diagnostics
+
+### **Latest Migration (September 2025):**
+🔄 **Unified System Migration Complete** - Successfully migrated all core processing functions from dual-sheet approach to unified event vocabulary system:
+- **Old System**: Separate court events (`courtEventLoader.js`) and other events (`eventTypesLoader.js`) 
+- **New System**: Single unified event vocabulary with consolidated processing pipeline
+- **Updated Functions**: All main processing functions now use `loadUnifiedEventVocabulary()`, `generateUnifiedSummary()`, and `findUnifiedEventMatch()`
+- **Clean Migration**: Old dual-sheet files replaced with deprecation notices and marked for deletion
+- **Files Updated**: `errorHandling.js`, `calendarSync.js`, `debugClientMatching.js`, `testSuite.js`
 
 ### **Remaining Opportunities:**
 1. **Single Calendar Source**: Only processes default calendar, no multi-calendar support

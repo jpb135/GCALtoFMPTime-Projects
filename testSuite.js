@@ -172,7 +172,7 @@ function testAllSheetsAccess() {
     
     // Test event vocabulary sheet
     try {
-      const eventVocabulary = loadEventVocabularyFromSheet();
+      const eventVocabulary = loadUnifiedEventVocabulary();
       results.eventVocabulary = { 
         status: 'success', 
         count: eventVocabulary.length,
@@ -282,7 +282,7 @@ function testEventVocabularySystem() {
   try {
     console.log('📝 Testing Event Vocabulary System...');
     
-    const eventVocabulary = loadEventVocabularyFromSheet();
+    const eventVocabulary = loadUnifiedEventVocabulary();
     
     if (eventVocabulary.length === 0) {
       throw new Error('No event vocabulary loaded');
@@ -296,7 +296,7 @@ function testEventVocabularySystem() {
     ];
     
     const testResults = testCases.map(testCase => {
-      const match = findCourtEventMatch(testCase.title, eventVocabulary);
+      const match = findUnifiedEventMatch(testCase.title, eventVocabulary);
       const matchFound = !!match;
       const passed = matchFound === testCase.expectedMatch;
       
@@ -432,7 +432,7 @@ function testSummaryGenerationLogic() {
     console.log('📝 Testing Summary Generation...');
     
     const judgeMap = loadJudgeMapFromSheet();
-    const eventVocabulary = loadEventVocabularyFromSheet();
+    const eventVocabulary = loadUnifiedEventVocabulary();
     const clientMatch = { name: 'TestClient', uid: 'TEST123' };
     
     const testCases = [
@@ -442,11 +442,8 @@ function testSummaryGenerationLogic() {
     ];
     
     const testResults = testCases.map(testCase => {
-      const summary = generateSummaryFromTitle(
+      const summary = generateUnifiedSummary(
         testCase.title, 
-        judgeMap, 
-        [], 
-        eventVocabulary, 
         clientMatch
       );
       
@@ -496,7 +493,7 @@ function testCompleteProcessingPipeline() {
     // Test loading all required data
     const clientMap = loadClientMappingFromSheet();
     const judgeMap = loadJudgeMapFromSheet();
-    const eventVocabulary = loadEventVocabularyFromSheet();
+    const eventVocabulary = loadUnifiedEventVocabulary();
     
     // Test calendar access
     const events = CalendarApp.getDefaultCalendar().getEvents(testStart, testEnd);
@@ -568,7 +565,7 @@ function benchmarkProcessingPerformance() {
     
     // Benchmark event vocabulary loading
     const vocabStart = new Date().getTime();
-    const eventVocabulary = loadEventVocabularyFromSheet();
+    const eventVocabulary = loadUnifiedEventVocabulary();
     benchmarks.eventVocabularyMs = new Date().getTime() - vocabStart;
     
     // Benchmark judge loading

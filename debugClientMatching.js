@@ -138,11 +138,7 @@ function debugTodaysEvents() {
         
         // Show what the summary would be
         try {
-          const judgeMap = loadJudgeMapFromSheet();
-          const otherEventTypes = loadOtherEventTypesFromSheet();
-          const courtEventTypes = loadEventVocabularyFromSheet();
-          
-          const summary = generateSummaryFromTitle(title, judgeMap, otherEventTypes, courtEventTypes, match);
+          const summary = generateUnifiedSummary(title, match);
           console.log(`   📝 SUMMARY: "${summary}"`);
           
           const duration = _calculateRoundedDuration(start, end);
