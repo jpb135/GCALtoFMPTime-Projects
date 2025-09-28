@@ -143,8 +143,14 @@ function generateUnifiedBillingDescription(eventMatch, clientMatch, title) {
   
   // Replace client name placeholders
   if (clientMatch) {
+    // Handle the case where client data only has matchedName, not separate first/last
+    const fullName = clientMatch.firstName && clientMatch.lastName 
+      ? `${clientMatch.firstName} ${clientMatch.lastName}`
+      : clientMatch.matchedName || 'Client';
+    
     description = description
-      .replace('{Client First Name}', clientMatch.firstName || clientMatch.matchedName)
+      .replace('{Client First Name} {Client Last Name}', fullName)
+      .replace('{Client First Name}', clientMatch.firstName || clientMatch.matchedName || 'Client')
       .replace('{Client Last Name}', clientMatch.lastName || '');
   } else {
     // No client match - use generic placeholders or remove client references
