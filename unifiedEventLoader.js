@@ -11,7 +11,7 @@ function loadUnifiedEventVocabulary() {
   try {
     // Direct access to unified events sheet
     const sheetId = '1dvuh7CzamgBlQmCT2ysQOfS-eRMei7GVcV8M-blaWTw';
-    const sheet = SpreadsheetApp.openById(sheetId).getSheetByName('Event Types');
+    const sheet = SpreadsheetApp.openById(sheetId).getSheetByName('EventTypes');
     const rows = sheet.getDataRange().getValues();
 
     const events = [];
