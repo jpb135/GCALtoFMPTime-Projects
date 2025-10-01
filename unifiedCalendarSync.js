@@ -71,15 +71,21 @@ function processCalendarEventsUnified(startDate, endDate) {
       const duration = _calculateRoundedDuration(start, end);
       const dateString = formatDateForFileMaker(start);
       
+      const fieldData = {
+        Body: title,
+        Date: dateString,
+        Time: duration,
+        Summary: summary,
+        UID_User_fk: currentUserId
+      };
+      
+      // Only include client field if there's a match
+      if (clientMatch) {
+        fieldData.UID_Client_fk = clientMatch.uid;
+      }
+      
       matchedPayloads.push({
-        fieldData: {
-          UID_Client_fk: clientMatch ? clientMatch.uid : null, // Allow null for no client
-          Body: title,
-          Date: dateString,
-          Time: duration,
-          Summary: summary,
-          UID_User_fk: currentUserId
-        }
+        fieldData: fieldData
       });
       
       Logger.log(`📝 Created payload: ${summary} (${duration}h)`);

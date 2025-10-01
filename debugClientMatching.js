@@ -148,7 +148,7 @@ function debugTodaysEvents() {
           console.log(`   ❌ Error generating summary: ${summaryError.message}`);
         }
       } else {
-        console.log('   ❌ NO CLIENT MATCH - Event would be skipped');
+        console.log('   ❌ NO CLIENT MATCH - Event would be processed with blank client field');
         
         // Show what client names we tried to match against
         const lowerTitle = title.toLowerCase();

@@ -270,7 +270,7 @@ function processWithGracefulDegradation(items, processor, options = {}) {
   }
   
   // Log summary
-  console.log(`📊 Processing complete: ${results.successful}/${results.total} successful, ${results.skipped} skipped, ${results.failed} failed`);
+  console.log(`📊 Processing complete: ${results.successful}/${results.total} successful, ${results.skipped} non-client events, ${results.failed} failed`);
   
   return results;
 }
@@ -363,15 +363,21 @@ function processCalendarEventsWithErrorHandling(startDate, endDate) {
         console.log(`  ℹ️ Processing non-client event: "${title}" → "${summary}"`);
       }
 
+      const fieldData = {
+        Body: title,
+        Date: dateString,
+        Time: duration,
+        Summary: summary,
+        UID_User_fk: currentUserId
+      };
+      
+      // Only include client field if there's a match
+      if (match) {
+        fieldData.UID_Client_fk = match.uid;
+      }
+      
       const payload = {
-        fieldData: {
-          UID_Client_fk: match ? match.uid : null, // Allow null for no client
-          Body: title,
-          Date: dateString,
-          Time: duration,
-          Summary: summary,
-          UID_User_fk: currentUserId
-        }
+        fieldData: fieldData
       };
 
       // Create FileMaker record with retry
@@ -387,21 +393,22 @@ function processCalendarEventsWithErrorHandling(startDate, endDate) {
     console.log('📊 PROCESSING COMPLETE:');
     console.log(`   Events Found: ${events.length}`);
     console.log(`   Successfully Processed: ${processingResults.successful}`);
-    console.log(`   Skipped (non-client): ${processingResults.skipped || unmatchedEvents.length}`);
+    console.log(`   Non-Client Events Processed: ${unmatchedEvents.length}`);
     console.log(`   Failed (errors): ${processingResults.failed}`);
     console.log(`   Total Runtime: ${totalRuntime} seconds`);
     
     // Log unmatched events summary (informational only, not an error)
     if (unmatchedEvents.length > 0) {
-      console.log('\nℹ️ NON-CLIENT EVENTS (Personal/Other):');
+      console.log('\nℹ️ NON-CLIENT EVENTS PROCESSED:');
       console.log('=====================================');
       unmatchedEvents.forEach((event, index) => {
         console.log(`${index + 1}. "${event.title}"`);
         console.log(`   Date: ${event.date}`);
         console.log(`   Duration: ${event.duration} hours`);
+        console.log(`   Summary: ${event.summary}`);
       });
       console.log(`\nTotal non-client events: ${unmatchedEvents.length}`);
-      console.log('Note: These are likely personal events and were skipped intentionally');
+      console.log('Note: These events were processed successfully with blank client field');
       console.log('=====================================\n');
     } else {
       console.log('\n✅ All events were client-related and processed!\n');
@@ -411,7 +418,7 @@ function processCalendarEventsWithErrorHandling(startDate, endDate) {
       status: processingResults.failed === 0 ? 'SUCCESS' : 'PARTIAL_SUCCESS',
       eventsFound: events.length,
       successful: processingResults.successful,
-      skipped: processingResults.skipped || unmatchedEvents.length,
+      nonClientEventsProcessed: unmatchedEvents.length, // Changed from 'skipped' to reflect that we process all events
       failed: processingResults.failed,
       runtimeSeconds: totalRuntime,
       errors: processingResults.errors,

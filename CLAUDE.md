@@ -31,6 +31,7 @@ Daily calendar → UID_Map sheet → Court/Event types → 12-min blocks → Tim
 - **Court Event Detection**: Keyword-based identification (motion, hearing, trial, etc.)
 - **Time Rounding**: 12-minute billing blocks with 0.2-hour minimum
 - **Legal Summarization**: Context-aware descriptions for billing records
+- **Process All Events**: **FUNDAMENTAL PRINCIPLE** - ALL calendar events are processed and sent to FileMaker (no skipping)
 
 **External Integrations:**
 - **GCP Secret Manager**: Secure credential storage for FileMaker and sheet access
@@ -216,6 +217,8 @@ const decoded = Utilities.newBlob(Utilities.base64Decode(JSON.parse(response.get
 - **Old System**: Separate court events (`courtEventLoader.js`) and other events (`eventTypesLoader.js`) 
 - **New System**: Single unified event vocabulary with consolidated processing pipeline
 - **Updated Functions**: All main processing functions now use `loadUnifiedEventVocabulary()`, `generateUnifiedSummary()`, and `findUnifiedEventMatch()`
+- **Process All Events**: **CRITICAL DECISION** - System now processes ALL calendar events regardless of client match status
+- **No Event Skipping**: Events without client matches are processed with blank client field and original title as summary
 - **Clean Migration**: Old dual-sheet files replaced with deprecation notices and marked for deletion
 - **Files Updated**: `errorHandling.js`, `calendarSync.js`, `debugClientMatching.js`, `testSuite.js`
 
