@@ -442,3 +442,158 @@ function processCalendarEventsWithErrorHandling(startDate, endDate) {
     };
   }
 }
+
+/**
+ * Enhanced FileMaker error handling specifically for error 1708 and data validation issues
+ * 
+ * @param {Error} error - The FileMaker error
+ * @param {Object} eventData - The event data that caused the error
+ * @returns {Object} Enhanced error information with diagnostic details
+ */
+function handleFileMakerError(error, eventData = null) {
+  try {
+    const errorMessage = error.message || '';
+    let errorAnalysis = {
+      errorType: 'UNKNOWN_FILEMAKER_ERROR',
+      originalError: errorMessage,
+      diagnostics: {},
+      recommendations: [],
+      canRetry: false
+    };
+    
+    // Parse FileMaker error codes from response
+    let filemakerErrorCode = null;
+    const codeMatch = errorMessage.match(/"code":"(\d+)"/);
+    if (codeMatch) {
+      filemakerErrorCode = codeMatch[1];
+    }
+    
+    Logger.log(`🔍 FileMaker error analysis - Code: ${filemakerErrorCode}`);
+    
+    switch (filemakerErrorCode) {
+      case '1708':
+        errorAnalysis = analyzeError1708(errorMessage, eventData);
+        break;
+      case '504':
+        // Duplicate record - this is actually expected behavior
+        errorAnalysis.errorType = 'DUPLICATE_RECORD';
+        errorAnalysis.canRetry = false;
+        errorAnalysis.recommendations = ['This is normal - FileMaker prevents duplicate records'];
+        Logger.log('ℹ️ FileMaker 504 error - duplicate record prevention (expected behavior)');
+        break;
+      case '401':
+        errorAnalysis.errorType = 'AUTHENTICATION_ERROR';
+        errorAnalysis.recommendations = ['Check FileMaker credentials', 'Verify server connectivity'];
+        break;
+      default:
+        errorAnalysis.errorType = 'FILEMAKER_ERROR';
+        errorAnalysis.recommendations = ['Check FileMaker server logs', 'Verify database layout configuration'];
+    }
+    
+    // Log detailed diagnostics for error 1708
+    if (filemakerErrorCode === '1708') {
+      Logger.log('🚨 FILEMAKER ERROR 1708 DETECTED - Parameter value is invalid');
+      Logger.log('📊 Event data analysis:');
+      if (eventData && eventData.fieldData) {
+        Object.keys(eventData.fieldData).forEach(field => {
+          const value = eventData.fieldData[field];
+          Logger.log(`   ${field}: "${typeof value === 'string' ? value.substring(0, 100) : value}${typeof value === 'string' && value.length > 100 ? '...' : ''}"`);
+          Logger.log(`   ${field} type: ${typeof value}, length: ${typeof value === 'string' ? value.length : 'N/A'}`);
+        });
+      }
+      
+      sendErrorNotification('FILEMAKER_1708_ERROR', 
+        `Error 1708 encountered with event data: ${JSON.stringify(eventData, null, 2)}\n\nError: ${errorMessage}`);
+    }
+    
+    return errorAnalysis;
+    
+  } catch (analysisError) {
+    Logger.log(`❌ Error analyzing FileMaker error: ${analysisError.message}`);
+    return {
+      errorType: 'ERROR_ANALYSIS_FAILED',
+      originalError: error.message,
+      analysisError: analysisError.message,
+      canRetry: false
+    };
+  }
+}
+
+/**
+ * Specific analysis for FileMaker error 1708 "Parameter value is invalid"
+ * 
+ * @param {string} errorMessage - Full error message
+ * @param {Object} eventData - Event data that caused the error
+ * @returns {Object} Detailed error analysis
+ */
+function analyzeError1708(errorMessage, eventData) {
+  const analysis = {
+    errorType: 'PARAMETER_VALIDATION_ERROR',
+    originalError: errorMessage,
+    diagnostics: {
+      probableField: null,
+      issues: [],
+      dataLength: {},
+      containsHtml: false,
+      containsSpecialChars: false
+    },
+    recommendations: [
+      'Apply data sanitization before sending to FileMaker',
+      'Check for HTML content in event descriptions',
+      'Verify field length limits',
+      'Remove special characters and Unicode'
+    ],
+    canRetry: true // Can retry with sanitized data
+  };
+  
+  if (eventData && eventData.fieldData) {
+    // Analyze each field for potential issues
+    Object.keys(eventData.fieldData).forEach(field => {
+      const value = eventData.fieldData[field];
+      if (typeof value === 'string') {
+        analysis.diagnostics.dataLength[field] = value.length;
+        
+        // Check for HTML content
+        if (value.includes('<') && value.includes('>')) {
+          analysis.diagnostics.containsHtml = true;
+          analysis.diagnostics.issues.push(`${field} contains HTML tags`);
+        }
+        
+        // Check for problematic characters
+        if (/[^\x20-\x7E]/.test(value)) {
+          analysis.diagnostics.containsSpecialChars = true;
+          analysis.diagnostics.issues.push(`${field} contains non-printable characters`);
+        }
+        
+        // Check for excessive length
+        if (value.length > 500) {
+          analysis.diagnostics.issues.push(`${field} exceeds recommended length (${value.length} chars)`);
+        }
+        
+        // If this field has the most issues, it's probably the culprit
+        if (analysis.diagnostics.issues.length > 0) {
+          analysis.diagnostics.probableField = field;
+        }
+      }
+    });
+  }
+  
+  return analysis;
+}
+
+/**
+ * Update the getRecommendedActions function to include FileMaker 1708 specific guidance
+ */
+function getRecommendedActions(errorType) {
+  const actions = {
+    'TIMEOUT': '- Consider reducing date range for processing\n- Check for large calendar volumes\n- Monitor FileMaker server response times\n- Contact administrator if persistent',
+    'PROCESSING_ERROR': '- Check system logs for details\n- Verify all services are accessible\n- Retry processing if transient\n- Contact administrator for persistent issues',
+    'SECRET_MANAGER_ERROR': '- Verify Secret Manager permissions\n- Check OAuth token expiration\n- Ensure project access is configured\n- Contact administrator',
+    'FILEMAKER_ERROR': '- Check FileMaker server connectivity\n- Verify database credentials\n- Ensure layout exists and is accessible\n- Contact database administrator',
+    'FILEMAKER_1708_ERROR': '- Apply data sanitization to event data\n- Remove HTML tags from calendar descriptions\n- Truncate long field values\n- Replace special characters with ASCII equivalents\n- Check for Unicode characters outside printable range\n- Contact developer if persistent after sanitization',
+    'CALENDAR_ERROR': '- Verify calendar permissions\n- Check OAuth scopes configuration\n- Ensure calendar exists and is accessible\n- Re-authorize if needed',
+    'SHEETS_ERROR': '- Verify Google Sheets permissions\n- Check sheet IDs in Secret Manager\n- Ensure sheets exist and tabs are named correctly\n- Contact administrator'
+  };
+  
+  return actions[errorType] || '- Check system logs\n- Verify connectivity\n- Retry if needed\n- Contact administrator';
+}

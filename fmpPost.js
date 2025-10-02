@@ -1,4 +1,7 @@
 function createFileMakerRecord(recordData) {
+  // Sanitize data before sending to FileMaker to prevent error 1708
+  const sanitizedData = sanitizeEventDataForFileMaker(recordData);
+  
   const { token, fmConfig } = getFileMakerToken();
 
   const createUrl = `${fmConfig.host}/fmi/data/vLatest/databases/${fmConfig.db}/layouts/${fmConfig.layout}/records`;
@@ -6,7 +9,7 @@ function createFileMakerRecord(recordData) {
     method: 'post',
     headers: { Authorization: 'Bearer ' + token },
     contentType: 'application/json',
-    payload: JSON.stringify(recordData),
+    payload: JSON.stringify(sanitizedData),
     muteHttpExceptions: true
   });
 

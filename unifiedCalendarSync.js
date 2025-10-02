@@ -104,8 +104,20 @@ function processCalendarEventsUnified(startDate, endDate) {
         Logger.log(`✅ Record ${index + 1}: Created FileMaker record ${result.recordId}`);
         successCount++;
       } catch (error) {
-        Logger.log(`❌ Record ${index + 1}: Failed to create FileMaker record: ${error.message}`);
-        failureCount++;
+        // Enhanced error handling for FileMaker issues
+        const errorAnalysis = handleFileMakerError(error, payload);
+        
+        if (errorAnalysis.errorType === 'DUPLICATE_RECORD') {
+          Logger.log(`ℹ️ Record ${index + 1}: Duplicate record (expected) - ${error.message}`);
+          // Don't count duplicates as failures
+        } else {
+          Logger.log(`❌ Record ${index + 1}: Failed to create FileMaker record: ${error.message}`);
+          Logger.log(`🔍 Error analysis: ${errorAnalysis.errorType}`);
+          if (errorAnalysis.diagnostics && errorAnalysis.diagnostics.issues) {
+            Logger.log(`📊 Issues found: ${errorAnalysis.diagnostics.issues.join(', ')}`);
+          }
+          failureCount++;
+        }
       }
     });
     
