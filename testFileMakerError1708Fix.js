@@ -81,7 +81,7 @@ function testAdditionalProblematicScenarios() {
       data: {
         fieldData: {
           Body: 'Estate Planning Meeting',
-          Summary: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. '.repeat(50) + ' — Unicode dash — Smart "quotes" and 'apostrophes'',
+          Summary: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. '.repeat(50) + ' — Unicode dash — Smart "quotes" and \'apostrophes\'',
           UID_User_fk: 4
         }
       }
@@ -91,7 +91,7 @@ function testAdditionalProblematicScenarios() {
       data: {
         fieldData: {
           Body: 'Trust Execution <Meeting>',
-          Summary: '<p>Meeting with client about trust execution…</p><div>Location: "Office" – Main Building</div><br/>Notes: Client wants to discuss the Smith & Jones "family trust" requirements.</p>',
+          Summary: '<p>Meeting with client about trust execution…</p><div>Location: \\"Office\\" – Main Building</div><br/>Notes: Client wants to discuss the Smith & Jones \\"family trust\\" requirements.</p>',
           UID_User_fk: 4
         }
       }
